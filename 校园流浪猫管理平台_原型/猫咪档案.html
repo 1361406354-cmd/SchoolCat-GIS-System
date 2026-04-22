@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>猫咪档案库 - 校猫守护</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .filter-chip.active {
+            background-color: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+        .cat-card:hover .cat-action {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans flex h-screen overflow-hidden">
+<!-- 1. 左侧导航栏 (复用结构) -->
+<aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300">
+<div class="p-4 flex items-center gap-3 border-b border-gray-100 h-16">
+<div class="bg-indigo-600 p-2 rounded-xl">
+<iconify-icon class="text-white text-2xl" icon="mdi:cat"></iconify-icon>
+</div>
+<span class="font-bold text-xl text-gray-800 hidden lg:block">校猫守护</span>
+</div>
+<nav class="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+<a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="index.html">
+<iconify-icon class="text-2xl" icon="mdi:map-marker-radius"></iconify-icon>
+<span class="font-medium hidden lg:block">GIS 地图</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="admin.html">
+<iconify-icon class="text-2xl" icon="mdi:view-dashboard"></iconify-icon>
+<span class="font-medium hidden lg:block">管理看板</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-xl transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-100" href="archive.html">
+<iconify-icon class="text-2xl" icon="mdi:folder-account"></iconify-icon>
+<span class="font-medium hidden lg:block">猫咪档案</span>
+</a>
+<div class="pt-4 pb-2">
+<p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:block">互动广场</p>
+</div>
+<a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="#">
+<iconify-icon class="text-2xl" icon="mdi:heart-multiple"></iconify-icon>
+<span class="font-medium hidden lg:block">领养意向</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="#">
+<iconify-icon class="text-2xl" icon="mdi:comment-quote"></iconify-icon>
+<span class="font-medium hidden lg:block">云养日记</span>
+</a>
+</nav>
+<div class="p-4 border-t border-gray-100">
+<div class="flex items-center gap-3">
+<img alt="Admin Avatar" class="w-10 h-10 rounded-full border border-gray-200" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/465f932b54a8433691de77bfda0db507.jpg"/>
+<div class="hidden lg:block">
+<p class="text-sm font-bold text-gray-800">爱猫志愿者</p>
+<p class="text-xs text-gray-500">2026-04-22</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- 2. 档案库主内容区 -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<!-- 页面头部与搜索 -->
+<header class="bg-white px-8 py-6 border-b border-gray-100 sticky top-0 z-20">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div>
+<h2 class="text-2xl font-black text-gray-800">数字化猫咪档案库</h2>
+<p class="text-sm text-gray-500 mt-1">目前已有 1,248 只流浪猫录入系统</p>
+</div>
+<div class="flex flex-1 max-w-2xl gap-3">
+<div class="relative flex-1">
+<input class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" placeholder="搜索猫咪姓名、昵称、特征描述..." type="text"/>
+<iconify-icon class="absolute left-4 top-3.5 text-gray-400 text-xl" icon="mdi:magnify"></iconify-icon>
+</div>
+<button class="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100 flex items-center gap-2">
+<iconify-icon icon="mdi:filter-variant"></iconify-icon>
+                        高级筛选
+                    </button>
+</div>
+</div>
+<!-- 快捷筛选标签 -->
+<div class="mt-6 flex flex-wrap items-center gap-2">
+<span class="text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">快速分类:</span>
+<button class="filter-chip active px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold transition-all">全部猫咪</button>
+<button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all">图书馆常驻</button>
+<button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all">寻找领养</button>
+<button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all">橘色系</button>
+<button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all">已绝育</button>
+<button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all">亲人型</button>
+<div class="h-4 w-px bg-gray-200 mx-2"></div>
+<button class="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline">
+                    重置筛选 <iconify-icon icon="mdi:refresh"></iconify-icon>
+</button>
+</div>
+</header>
+<!-- 档案列表内容 -->
+<div class="p-8">
+<!-- 统计摘要栏 -->
+<div class="mb-8 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="flex -space-x-3">
+<img class="w-10 h-10 rounded-full border-4 border-white shadow-sm" src="/agent-py/static/source/images/placeholder.svg"/>
+<img class="w-10 h-10 rounded-full border-4 border-white shadow-sm" src="/agent-py/static/source/images/placeholder.svg"/>
+<img class="w-10 h-10 rounded-full border-4 border-white shadow-sm" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="w-10 h-10 rounded-full border-4 border-white shadow-sm bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">+1k</div>
+</div>
+<p class="text-sm text-gray-500 font-medium">当前列表匹配到 <span class="text-gray-800 font-black">42</span> 只猫咪</p>
+</div>
+<div class="flex bg-white rounded-lg border border-gray-200 p-1">
+<button class="p-2 text-indigo-600 bg-indigo-50 rounded"><iconify-icon icon="mdi:view-grid"></iconify-icon></button>
+<button class="p-2 text-gray-400 hover:bg-gray-50 rounded"><iconify-icon icon="mdi:view-list"></iconify-icon></button>
+</div>
+</div>
+<!-- 卡片栅格 -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+<!-- 卡片项 1 -->
+<div class="cat-card group bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-300 transform hover:-translate-y-2">
+<div class="relative h-64">
+<img alt="Cat Name" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/267d5f9510584857ac5670dce5fd8bdd.jpg"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-indigo-600/80 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase">图书馆</span>
+</div>
+<button class="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all">
+<iconify-icon class="text-xl" icon="mdi:heart-outline"></iconify-icon>
+</button>
+<!-- Hover Action -->
+<div class="cat-action absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 translate-y-4 flex items-center justify-center transition-all duration-300">
+<button class="bg-white text-indigo-600 px-6 py-2 rounded-full font-bold text-sm shadow-xl">查看全集记录</button>
+</div>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-xl font-black text-gray-800">大橘 (Big Orange)</h3>
+<span class="bg-green-50 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded">健康</span>
+</div>
+<p class="text-sm text-gray-500 line-clamp-2 mb-4">性格温顺，常出现在图书馆正门。喜欢吃罐头，不太怕人，是校内的明星猫。</p>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">已绝育</span>
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">公猫</span>
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">2岁左右</span>
+</div>
+<div class="pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
+<div class="flex items-center gap-2 text-gray-400">
+<iconify-icon icon="mdi:eye"></iconify-icon> 1.2k 浏览
+                            </div>
+<span class="text-gray-400">更新于 2天前</span>
+</div>
+</div>
+</div>
+<!-- 卡片项 2 -->
+<div class="cat-card group bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-300 transform hover:-translate-y-2">
+<div class="relative h-64">
+<img alt="Cat Name" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/267d5f9510584857ac5670dce5fd8bdd.jpg"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-amber-500/80 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase">急需领养</span>
+</div>
+<button class="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all">
+<iconify-icon class="text-xl" icon="mdi:heart-outline"></iconify-icon>
+</button>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-xl font-black text-gray-800">奶牛 (Cookie)</h3>
+<span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded">绝育恢复中</span>
+</div>
+<p class="text-sm text-gray-500 line-clamp-2 mb-4">黑白分明，花纹独特。比较害羞，需要耐心接触，希望能找到一个温暖的家。</p>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">未绝育</span>
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">母猫</span>
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">1岁左右</span>
+</div>
+<div class="pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
+<div class="flex items-center gap-2 text-gray-400">
+<iconify-icon icon="mdi:eye"></iconify-icon> 850 浏览
+                            </div>
+<span class="text-gray-400">更新于 5小时前</span>
+</div>
+</div>
+</div>
+<!-- 卡片项 3 -->
+<div class="cat-card group bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-300 transform hover:-translate-y-2">
+<div class="relative h-64">
+<img alt="Cat Name" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/267d5f9510584857ac5670dce5fd8bdd.jpg"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-green-600/80 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase">西校区</span>
+</div>
+<button class="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all">
+<iconify-icon class="text-xl" icon="mdi:heart-outline"></iconify-icon>
+</button>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-xl font-black text-gray-800">小煤球</h3>
+<span class="bg-green-50 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded">健康</span>
+</div>
+<p class="text-sm text-gray-500 line-clamp-2 mb-4">通体全黑，眼睛亮晶晶。喜欢在操场附近活动，奔跑速度极快。</p>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">已绝育</span>
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">公猫</span>
+<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">3岁</span>
+</div>
+<div class="pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
+<div class="flex items-center gap-2 text-gray-400">
+<iconify-icon icon="mdi:eye"></iconify-icon> 540 浏览
+                            </div>
+<span class="text-gray-400">更新于 1天前</span>
+</div>
+</div>
+</div>
+<!-- 后面重复类似卡片以填充栅格 -->
+<!-- [此处为了演示只列出3个，实际会展示更多] -->
+<!-- 填充卡片 4-8... -->
+<script>
+                    for(let i=0; i<5; i++) {
+                        document.write(`
+                        <div class="cat-card group bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-300 transform hover:-translate-y-2">
+                            <div class="relative h-64">
+                                <img src="/agent-py/static/source/images/placeholder.svg" class="w-full h-full object-cover">
+                                <div class="absolute top-4 left-4 flex gap-2">
+                                    <span class="bg-gray-600/80 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase">普通录入</span>
+                                </div>
+                            </div>
+                            <div class="p-6 opacity-60">
+                                <h3 class="text-xl font-black text-gray-800">校园校猫 #${1024 + i}</h3>
+                                <p class="text-sm text-gray-500 mb-4">暂无详细描述，欢迎志愿者补充...</p>
+                                <div class="pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
+                                    <span class="text-gray-400">待完善档案</span>
+                                </div>
+                            </div>
+                        </div>
+                        `);
+                    }
+                </script>
+</div>
+<!-- 分页组件 -->
+<div class="mt-16 flex items-center justify-center gap-2">
+<button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50">
+<iconify-icon icon="mdi:chevron-left"></iconify-icon>
+</button>
+<button class="w-10 h-10 rounded-xl bg-indigo-600 text-white font-bold text-sm">1</button>
+<button class="w-10 h-10 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-colors">2</button>
+<button class="w-10 h-10 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-colors">3</button>
+<span class="px-2 text-gray-400">...</span>
+<button class="w-10 h-10 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-colors">12</button>
+<button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50">
+<iconify-icon icon="mdi:chevron-right"></iconify-icon>
+</button>
+</div>
+</div>
+<!-- 底栏 -->
+<footer class="mt-auto py-8 px-8 bg-white border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+<p class="text-sm text-gray-400">© 2026 校猫守护 (SchoolCat Guardian) · 校园流浪猫智慧管理平台</p>
+<div class="flex items-center gap-6">
+<a class="text-xs text-gray-500 hover:text-indigo-600" href="#">使用协议</a>
+<a class="text-xs text-gray-500 hover:text-indigo-600" href="#">隐私政策</a>
+<a class="text-xs text-gray-500 hover:text-indigo-600" href="#">反馈建议</a>
+</div>
+</footer>
+</main>
+</body>
+</html>

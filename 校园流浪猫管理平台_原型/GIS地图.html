@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>校猫守护 - GIS 智慧地图</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .map-bg {
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-color: #f9fafb;
+        }
+        .marker-pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            70% { transform: scale(2.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .sidebar-item:hover {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: #4f46e5;
+        }
+        .sidebar-item.active {
+            background-color: #4f46e5;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex overflow-hidden">
+<!-- 1. 左侧导航栏 -->
+<aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300">
+<div class="p-4 flex items-center gap-3 border-b border-gray-100 h-16">
+<div class="bg-indigo-600 p-2 rounded-xl">
+<iconify-icon class="text-white text-2xl" icon="mdi:cat"></iconify-icon>
+</div>
+<span class="font-bold text-xl text-gray-800 hidden lg:block">校猫守护</span>
+</div>
+<nav class="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+<a class="sidebar-item active flex items-center gap-4 p-3 rounded-xl transition-all" href="index.html">
+<iconify-icon class="text-2xl" icon="mdi:map-marker-radius"></iconify-icon>
+<span class="font-medium hidden lg:block">GIS 地图</span>
+</a>
+<a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="admin.html">
+<iconify-icon class="text-2xl" icon="mdi:view-dashboard"></iconify-icon>
+<span class="font-medium hidden lg:block">管理看板</span>
+</a>
+<a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="archive.html">
+<iconify-icon class="text-2xl" icon="mdi:folder-account"></iconify-icon>
+<span class="font-medium hidden lg:block">猫咪档案</span>
+</a>
+<div class="pt-4 pb-2">
+<p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:block">常用工具</p>
+</div>
+<a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="#">
+<iconify-icon class="text-2xl" icon="mdi:camera-plus"></iconify-icon>
+<span class="font-medium hidden lg:block">发现上报</span>
+</a>
+<a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="#">
+<iconify-icon class="text-2xl" icon="mdi:medical-bag"></iconify-icon>
+<span class="font-medium hidden lg:block">医疗互助</span>
+</a>
+<a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="#">
+<iconify-icon class="text-2xl" icon="mdi:hand-heart"></iconify-icon>
+<span class="font-medium hidden lg:block">志愿者申请</span>
+</a>
+</nav>
+<div class="p-4 border-t border-gray-100">
+<div class="flex items-center gap-3">
+<img alt="Admin Avatar" class="w-10 h-10 rounded-full border border-gray-200" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/64bbb00b0f0d480c8abbc24db718405e.jpg"/>
+<div class="hidden lg:block">
+<p class="text-sm font-bold text-gray-800">张小猫</p>
+<p class="text-xs text-gray-500">2026-04-22</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- 2. 主地图显示区域 -->
+<main class="flex-1 relative overflow-hidden bg-gray-50 flex flex-col">
+<!-- 顶部状态栏 -->
+<header class="absolute top-4 left-4 right-4 z-10 flex justify-between items-center pointer-events-none">
+<div class="flex gap-4 pointer-events-auto">
+<div class="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/50 flex items-center gap-3">
+<span class="flex h-3 w-3 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+</span>
+<span class="text-sm font-bold text-gray-700">实时在线猫咪: 142 只</span>
+</div>
+<div class="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/50 flex items-center gap-3">
+<iconify-icon class="text-amber-500" icon="mdi:weather-sunny"></iconify-icon>
+<span class="text-sm font-medium text-gray-700">北校区 · 晴 22℃</span>
+</div>
+</div>
+<div class="flex gap-3 pointer-events-auto">
+<div class="relative">
+<input class="bg-white/90 backdrop-blur-md pl-10 pr-4 py-2 rounded-full shadow-lg border border-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64 text-sm transition-all" placeholder="搜索猫咪姓名、区域..." type="text"/>
+<iconify-icon class="absolute left-3 top-2.5 text-gray-400 text-lg" icon="mdi:magnify"></iconify-icon>
+</div>
+<button class="bg-indigo-600 text-white p-2 rounded-full shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center">
+<iconify-icon class="text-xl" icon="mdi:plus"></iconify-icon>
+</button>
+</div>
+</header>
+<!-- 地图画布 -->
+<div class="flex-1 map-bg relative cursor-grab active:cursor-grabbing p-20">
+<!-- 模拟地图线条和区域 (简化展示) -->
+<div class="absolute inset-20 border-4 border-dashed border-gray-200 rounded-[40px] pointer-events-none"></div>
+<!-- 校园建筑模拟 -->
+<div class="absolute top-[15%] left-[20%] w-48 h-32 bg-white/60 border-2 border-indigo-100 rounded-lg flex items-center justify-center shadow-sm">
+<span class="text-indigo-300 font-bold uppercase tracking-tighter opacity-50">图书馆区</span>
+</div>
+<div class="absolute bottom-[20%] right-[15%] w-64 h-40 bg-white/60 border-2 border-indigo-100 rounded-lg flex items-center justify-center shadow-sm">
+<span class="text-indigo-300 font-bold uppercase tracking-tighter opacity-50">东区操场</span>
+</div>
+<div class="absolute top-[40%] right-[30%] w-40 h-40 bg-white/60 border-2 border-indigo-100 rounded-full flex items-center justify-center shadow-sm">
+<span class="text-indigo-300 font-bold uppercase tracking-tighter opacity-50">未名湖</span>
+</div>
+<!-- 地图标注点位 1 (点击弹窗示例) -->
+<div class="absolute top-[25%] left-[28%] group cursor-pointer" onclick="togglePopup('popup-1')">
+<div class="relative">
+<div class="marker-pulse absolute -inset-2 rounded-full bg-amber-400/50"></div>
+<div class="relative bg-white p-1 rounded-full shadow-lg border-2 border-amber-500">
+<img alt="Cat 1" class="w-10 h-10 rounded-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/9c767457a5384ce9a4f9dc7b17f935a1.jpg"/>
+</div>
+</div>
+<!-- 迷你标签 -->
+<div class="mt-2 bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                    大橘 (图书馆)
+                </div>
+</div>
+<!-- 地图标注点位 2 -->
+<div class="absolute top-[50%] right-[40%] group cursor-pointer" onclick="togglePopup('popup-2')">
+<div class="relative">
+<div class="marker-pulse absolute -inset-2 rounded-full bg-indigo-400/50"></div>
+<div class="relative bg-white p-1 rounded-full shadow-lg border-2 border-indigo-500">
+<img alt="Cat 2" class="w-10 h-10 rounded-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/dc08dc1be75f436fa20aa0e325eac9c1.jpg"/>
+</div>
+</div>
+<div class="mt-2 bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                    奶牛 (未名湖畔)
+                </div>
+</div>
+<!-- 地图标注点位 3 -->
+<div class="absolute bottom-[35%] left-[45%] group cursor-pointer">
+<div class="relative">
+<div class="marker-pulse absolute -inset-2 rounded-full bg-green-400/50"></div>
+<div class="relative bg-white p-1 rounded-full shadow-lg border-2 border-green-500">
+<img alt="Cat 3" class="w-10 h-10 rounded-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/d80bbc308fab4c3a8ae2d6395247bfb3.jpg"/>
+</div>
+</div>
+<div class="mt-2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                    黑猫 (西食堂)
+                </div>
+</div>
+<!-- 信息浮窗 Popup -->
+<div class="hidden absolute top-[10%] left-[35%] w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-20 overflow-hidden transform transition-all scale-100" id="popup-1">
+<div class="relative h-32 overflow-hidden">
+<img alt="Cover" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-22/6527c0dc923245369b3c6c483e3fd0c0.jpg"/>
+<button class="absolute top-2 right-2 bg-black/20 hover:bg-black/40 p-1 rounded-full text-white backdrop-blur-md" onclick="togglePopup('popup-1')">
+<iconify-icon icon="mdi:close"></iconify-icon>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h3 class="font-bold text-lg text-gray-800">大橘</h3>
+<p class="text-xs text-gray-500 flex items-center gap-1">
+<iconify-icon icon="mdi:map-marker"></iconify-icon> 北校区图书馆东南角
+                            </p>
+</div>
+<span class="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-1 rounded">健康</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mb-4 text-xs">
+<div class="bg-gray-50 p-2 rounded">
+<p class="text-gray-400">品种</p>
+<p class="font-medium">中华田园橘猫</p>
+</div>
+<div class="bg-gray-50 p-2 rounded">
+<p class="text-gray-400">绝育状态</p>
+<p class="font-medium">已绝育</p>
+</div>
+</div>
+<a class="block w-full text-center py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors" href="archive.html">查看详细档案</a>
+</div>
+</div>
+</div>
+<!-- 右侧工具栏 -->
+<div class="absolute right-6 top-1/2 -translate-y-1/2 space-y-3 z-10">
+<div class="bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-xl border border-white/50 flex flex-col gap-1">
+<button class="w-10 h-10 rounded-xl hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-all tooltip" title="放大">
+<iconify-icon class="text-xl" icon="mdi:plus"></iconify-icon>
+</button>
+<button class="w-10 h-10 rounded-xl hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-all" title="缩小">
+<iconify-icon class="text-xl" icon="mdi:minus"></iconify-icon>
+</button>
+<hr class="mx-2 border-gray-100"/>
+<button class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center transition-all" title="我的定位">
+<iconify-icon class="text-xl" icon="mdi:crosshairs-gps"></iconify-icon>
+</button>
+</div>
+<div class="bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-xl border border-white/50 flex flex-col gap-1">
+<button class="w-10 h-10 rounded-xl hover:bg-amber-50 hover:text-amber-600 flex items-center justify-center text-gray-500 transition-all" title="食盆点">
+<iconify-icon class="text-xl" icon="mdi:food-apple"></iconify-icon>
+</button>
+<button class="w-10 h-10 rounded-xl hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center text-gray-500 transition-all" title="监控视角">
+<iconify-icon class="text-xl" icon="mdi:video"></iconify-icon>
+</button>
+<button class="w-10 h-10 rounded-xl hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-gray-500 transition-all" title="警告区域">
+<iconify-icon class="text-xl" icon="mdi:alert-decagram"></iconify-icon>
+</button>
+</div>
+</div>
+<!-- 底部数据动态栏 -->
+<div class="h-20 bg-white/80 backdrop-blur-xl border-t border-gray-200 flex items-center px-6 gap-8 overflow-hidden">
+<div class="flex items-center gap-2 whitespace-nowrap border-r pr-8 border-gray-100">
+<iconify-icon class="text-indigo-600 text-xl" icon="mdi:broadcast"></iconify-icon>
+<span class="font-bold text-gray-700">实时广播:</span>
+</div>
+<div class="flex-1 overflow-hidden relative h-6">
+<div class="flex gap-12 animate-scroll-left">
+<div class="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="font-medium text-gray-800">10:24 AM:</span> 志愿者“青松”在图书馆站完成了猫粮补给。
+                    </div>
+<div class="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<span class="font-medium text-gray-800">10:15 AM:</span> 猫咪“云吞”通过了智能猫屋入口。
+                    </div>
+<div class="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="font-medium text-gray-800">09:50 AM:</span> 档案库新增猫咪录入申请“小饼干”。
+                    </div>
+</div>
+</div>
+</div>
+</main>
+<style>
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-scroll-left {
+            display: flex;
+            width: fit-content;
+            animation: scroll-left 30s linear infinite;
+        }
+    </style>
+<script>
+        function togglePopup(id) {
+            const popup = document.getElementById(id);
+            if(popup.classList.contains('hidden')) {
+                // 隐藏所有其它popup
+                document.querySelectorAll('[id^="popup-"]').forEach(p => p.classList.add('hidden'));
+                popup.classList.remove('hidden');
+            } else {
+                popup.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
