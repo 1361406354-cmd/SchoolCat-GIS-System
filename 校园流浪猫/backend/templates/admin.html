@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>管理看板 - 校猫守护</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body class="bg-gray-50 font-sans flex h-screen overflow-hidden">
+<!-- 左侧导航栏 -->
+<aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 flex-shrink-0">
+    <div class="p-4 flex items-center gap-3 border-b border-gray-100 h-16">
+        <div class="bg-indigo-600 p-2 rounded-xl">
+            <iconify-icon class="text-white text-2xl" icon="mdi:cat"></iconify-icon>
+        </div>
+        <span class="font-bold text-xl text-gray-800 hidden lg:block">校猫守护</span>
+    </div>
+    <nav class="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="/">
+            <iconify-icon class="text-2xl" icon="mdi:map-marker-radius"></iconify-icon>
+            <span class="font-medium hidden lg:block">GIS 地图</span>
+        </a>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-100" href="/admin">
+            <iconify-icon class="text-2xl" icon="mdi:view-dashboard"></iconify-icon>
+            <span class="font-medium hidden lg:block">管理看板</span>
+        </a>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="/archive">
+            <iconify-icon class="text-2xl" icon="mdi:folder-account"></iconify-icon>
+            <span class="font-medium hidden lg:block">猫咪档案</span>
+        </a>
+        <div class="pt-4 pb-2">
+            <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:block">系统管理</p>
+        </div>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="#" onclick="scrollToSection('pendingSection')">
+            <iconify-icon class="text-2xl" icon="mdi:shield-check"></iconify-icon>
+            <span class="font-medium hidden lg:block">审核中心</span>
+        </a>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="#" onclick="if(confirm('确认初始化种子数据？')) API.seedData().then(r=>{alert(r.message);location.reload()})">
+            <iconify-icon class="text-2xl" icon="mdi:database-cog"></iconify-icon>
+            <span class="font-medium hidden lg:block">初始化数据</span>
+        </a>
+    </nav>
+    <div class="p-4 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+            <div id="avatarContainer" class="w-10 h-10 rounded-full border border-gray-200 bg-indigo-100 flex items-center justify-center">
+                <iconify-icon class="text-indigo-600 text-xl" icon="mdi:account"></iconify-icon>
+            </div>
+            <div class="hidden lg:block">
+                <p id="userDisplayName" class="text-sm font-bold text-gray-800">未登录</p>
+                <p id="userRole" class="text-xs text-gray-500">游客</p>
+            </div>
+        </div>
+    </div>
+</aside>
+<!-- 主内容区 -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+    <header class="bg-white h-16 border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-10">
+        <h2 class="text-lg font-bold text-gray-800">统计看板与管理中心</h2>
+        <div class="flex items-center gap-4">
+            <button class="relative p-2 text-gray-500 hover:bg-gray-50 rounded-full" onclick="location.reload()">
+                <iconify-icon class="text-xl" icon="mdi:refresh"></iconify-icon>
+            </button>
+        </div>
+    </header>
+    <div class="p-8 space-y-8">
+        <!-- 数据统计卡片 -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="statsCards">
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                    <iconify-icon class="text-3xl" icon="mdi:cat"></iconify-icon>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">在册猫咪总数</p>
+                    <h3 class="text-2xl font-black text-gray-800"><span id="statTotalCats">0</span></h3>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
+                    <iconify-icon class="text-3xl" icon="mdi:home-heart"></iconify-icon>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">累计被领养</p>
+                    <h3 class="text-2xl font-black text-gray-800"><span id="statAdopted">0</span></h3>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
+                    <iconify-icon class="text-3xl" icon="mdi:hospital-marker"></iconify-icon>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">当前医疗中</p>
+                    <h3 class="text-2xl font-black text-gray-800"><span id="statMedical">0</span></h3>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                    <iconify-icon class="text-3xl" icon="mdi:account-group"></iconify-icon>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">活跃志愿者</p>
+                    <h3 class="text-2xl font-black text-gray-800"><span id="statVolunteers">0</span></h3>
+                </div>
+            </div>
+        </section>
+        <!-- 图表 -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
+                    <h4 class="font-bold text-gray-800">各校区活跃分布</h4>
+                </div>
+                <div class="h-64" id="distributionChart"></div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
+                    <h4 class="font-bold text-gray-800">猫咪健康状态占比</h4>
+                </div>
+                <div class="h-64" id="healthChart"></div>
+            </div>
+        </section>
+        <!-- 审核列表 -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="pendingSection">
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-gray-50 flex justify-between items-center">
+                    <h4 class="font-bold text-gray-800">待审核申请</h4>
+                    <span id="pendingCount" class="text-sm text-gray-500">共 0 条</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                            <tr>
+                                <th class="px-6 py-3 font-semibold">提交信息</th>
+                                <th class="px-6 py-3 font-semibold">发现地点</th>
+                                <th class="px-6 py-3 font-semibold">提交人</th>
+                                <th class="px-6 py-3 font-semibold">状态</th>
+                                <th class="px-6 py-3 font-semibold">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingTableBody" class="divide-y divide-gray-50">
+                            <tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- 排行榜 -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h4 class="font-bold text-gray-800 mb-6">校区猫咪分布</h4>
+                <div class="space-y-6" id="areaRanking">
+                    <div class="text-center text-gray-400 py-8">加载中...</div>
+                </div>
+                <div class="mt-8 pt-6 border-t border-gray-50">
+                    <p class="text-xs text-center text-gray-400">数据实时更新</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script>
+let distChart = null;
+let healthChart = null;
+
+async function loadStats() {
+    try {
+        const stats = await API.getStats();
+
+        document.getElementById('statTotalCats').textContent = stats.total_cats || 0;
+        document.getElementById('statAdopted').textContent = stats.adopted_count || 0;
+        document.getElementById('statMedical').textContent = stats.medical_count || 0;
+        document.getElementById('statVolunteers').textContent = (stats.active_volunteers || 0) + (stats.total_users || 0);
+
+        // Distribution chart
+        if (!distChart) {
+            distChart = echarts.init(document.getElementById('distributionChart'));
+        }
+        const areas = stats.area_distribution || [];
+        distChart.setOption({
+            tooltip: { trigger: 'axis' },
+            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+            xAxis: { type: 'category', data: areas.map(a => a.name), axisLine: { lineStyle: { color: '#eee' } } },
+            yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
+            series: [{
+                data: areas.map(a => a.count),
+                type: 'bar',
+                itemStyle: { color: '#6366f1', borderRadius: [5, 5, 0, 0] }
+            }]
+        });
+
+        // Health chart
+        if (!healthChart) {
+            healthChart = echarts.init(document.getElementById('healthChart'));
+        }
+        const healthData = [
+            { value: stats.healthy_count || 0, name: '健康活跃', itemStyle: { color: '#10b981' } },
+            { value: stats.neutered_observe_count || 0, name: '已绝育观察', itemStyle: { color: '#6366f1' } },
+            { value: stats.treating_count || 0, name: '常规治疗中', itemStyle: { color: '#f59e0b' } },
+            { value: stats.emergency_count || 0, name: '紧急救治', itemStyle: { color: '#ef4444' } },
+        ].filter(d => d.value > 0);
+
+        healthChart.setOption({
+            tooltip: { trigger: 'item' },
+            legend: { bottom: '0', left: 'center', icon: 'circle' },
+            series: [{
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: false,
+                itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                label: { show: false },
+                data: healthData.length > 0 ? healthData : [{ value: 1, name: '暂无数据', itemStyle: { color: '#e5e7eb' } }]
+            }]
+        });
+
+        window.addEventListener('resize', () => {
+            distChart && distChart.resize();
+            healthChart && healthChart.resize();
+        });
+
+        // Area ranking
+        const rankContainer = document.getElementById('areaRanking');
+        if (areas.length > 0) {
+            const sorted = areas.sort((a, b) => b.count - a.count);
+            const colors = ['bg-amber-100 text-amber-600', 'bg-gray-100 text-gray-500', 'bg-orange-100 text-orange-600'];
+            rankContainer.innerHTML = sorted.map((a, i) => `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 flex items-center justify-center ${colors[i] || 'bg-gray-50 text-gray-400'} text-xs font-bold rounded-full">${i + 1}</span>
+                        <div>
+                            <p class="text-sm font-bold text-gray-800">${a.name}</p>
+                            <p class="text-[10px] text-gray-400">${a.count} 只猫咪</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            rankContainer.innerHTML = '<div class="text-center text-gray-400 py-4">暂无区域数据</div>';
+        }
+
+    } catch (e) { console.error('Failed to load stats:', e); }
+}
+
+async function loadPending() {
+    try {
+        const result = await API.getCheckins({ status: 'pending', per_page: 20 });
+        const tbody = document.getElementById('pendingTableBody');
+        document.getElementById('pendingCount').textContent = '共 ' + result.total + ' 条';
+
+        if (result.checkins.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">暂无待审核申请</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = result.checkins.map(ci => `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                            <iconify-icon class="text-gray-400" icon="${ci.type === 'feeding' ? 'mdi:food-apple' : 'mdi:cat'}"></iconify-icon>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-gray-800">${ci.cat_nickname || '未知猫咪'}</p>
+                            <p class="text-[10px] text-gray-400">${ci.type === 'feeding' ? '投喂记录' : '偶遇记录'}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">${ci.location_description || '未知'}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">${ci.username || '匿名'}</td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold rounded">待处理</span>
+                </td>
+                <td class="px-6 py-4 space-x-2">
+                    <button class="text-indigo-600 hover:text-indigo-800 text-sm font-bold" onclick="approveCheckin(${ci.record_id})">通过</button>
+                    <button class="text-gray-400 hover:text-red-500 text-sm" onclick="rejectCheckin(${ci.record_id})">
+                        <iconify-icon icon="mdi:close"></iconify-icon>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) { console.error(e); }
+}
+
+async function approveCheckin(id) {
+    try {
+        await API.approveCheckin(id);
+        loadPending();
+        loadStats();
+    } catch (e) { alert(e.message); }
+}
+
+async function rejectCheckin(id) {
+    if (!confirm('确认拒绝该条记录？')) return;
+    try {
+        await API.rejectCheckin(id);
+        loadPending();
+    } catch (e) { alert(e.message); }
+}
+
+function scrollToSection(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+
+async function checkAuth() {
+    try {
+        const result = await API.getCurrentUser();
+        if (result.user) {
+            document.getElementById('userDisplayName').textContent = result.user.display_name || result.user.username;
+            document.getElementById('userRole').textContent = result.user.role === 'admin' ? '管理员' : '志愿者';
+        }
+    } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuth();
+    await loadStats();
+    await loadPending();
+});
+</script>
+</body>
+</html>

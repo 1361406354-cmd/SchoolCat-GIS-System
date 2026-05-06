@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>猫咪档案库 - 校猫守护</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+<style>
+    .filter-chip.active {
+        background-color: #4f46e5;
+        color: white;
+        border-color: #4f46e5;
+    }
+    .cat-card:hover .cat-action {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
+</head>
+<body class="bg-gray-50 font-sans flex h-screen overflow-hidden">
+<!-- 左侧导航栏 -->
+<aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 flex-shrink-0">
+    <div class="p-4 flex items-center gap-3 border-b border-gray-100 h-16">
+        <div class="bg-indigo-600 p-2 rounded-xl">
+            <iconify-icon class="text-white text-2xl" icon="mdi:cat"></iconify-icon>
+        </div>
+        <span class="font-bold text-xl text-gray-800 hidden lg:block">校猫守护</span>
+    </div>
+    <nav class="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="/">
+            <iconify-icon class="text-2xl" icon="mdi:map-marker-radius"></iconify-icon>
+            <span class="font-medium hidden lg:block">GIS 地图</span>
+        </a>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="/admin">
+            <iconify-icon class="text-2xl" icon="mdi:view-dashboard"></iconify-icon>
+            <span class="font-medium hidden lg:block">管理看板</span>
+        </a>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-100" href="/archive">
+            <iconify-icon class="text-2xl" icon="mdi:folder-account"></iconify-icon>
+            <span class="font-medium hidden lg:block">猫咪档案</span>
+        </a>
+        <div class="pt-4 pb-2">
+            <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:block">互动广场</p>
+        </div>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="#">
+            <iconify-icon class="text-2xl" icon="mdi:heart-multiple"></iconify-icon>
+            <span class="font-medium hidden lg:block">领养意向</span>
+        </a>
+        <a class="flex items-center gap-4 p-3 rounded-xl transition-all text-gray-500 hover:bg-gray-50" href="#">
+            <iconify-icon class="text-2xl" icon="mdi:comment-quote"></iconify-icon>
+            <span class="font-medium hidden lg:block">云养日记</span>
+        </a>
+    </nav>
+    <div class="p-4 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+            <div id="avatarContainer" class="w-10 h-10 rounded-full border border-gray-200 bg-indigo-100 flex items-center justify-center">
+                <iconify-icon class="text-indigo-600 text-xl" icon="mdi:account"></iconify-icon>
+            </div>
+            <div class="hidden lg:block">
+                <p id="userDisplayName" class="text-sm font-bold text-gray-800">未登录</p>
+                <p id="userRole" class="text-xs text-gray-500">游客</p>
+            </div>
+        </div>
+    </div>
+</aside>
+<!-- 主内容区 -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+    <header class="bg-white px-8 py-6 border-b border-gray-100 sticky top-0 z-20">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+                <h2 class="text-2xl font-black text-gray-800">数字化猫咪档案库</h2>
+                <p class="text-sm text-gray-500 mt-1">目前已有 <span id="archiveTotal">0</span> 只流浪猫录入系统</p>
+            </div>
+            <div class="flex flex-1 max-w-2xl gap-3">
+                <div class="relative flex-1">
+                    <input id="searchInput" class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" placeholder="搜索猫咪姓名、昵称、特征描述..." type="text" onkeyup="if(event.key==='Enter') loadCats()"/>
+                    <iconify-icon class="absolute left-4 top-3.5 text-gray-400 text-xl" icon="mdi:magnify"></iconify-icon>
+                </div>
+                <button class="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100 flex items-center gap-2" onclick="showAddModal()">
+                    <iconify-icon icon="mdi:plus"></iconify-icon>
+                    添加猫咪
+                </button>
+            </div>
+        </div>
+        <!-- 快捷筛选 -->
+        <div class="mt-6 flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">快速分类:</span>
+            <button class="filter-chip active px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold transition-all" data-filter="all" onclick="setFilter('all', this)">全部猫咪</button>
+            <button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all" data-filter="adoptable" onclick="setFilter('adoptable', this)">寻找领养</button>
+            <button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all" data-filter="neutered" onclick="setFilter('neutered', this)">已绝育</button>
+            <button class="filter-chip px-4 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-600 hover:border-indigo-200 transition-all" data-filter="healthy" onclick="setFilter('healthy', this)">健康猫咪</button>
+            <div class="h-4 w-px bg-gray-200 mx-2"></div>
+            <button class="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline" onclick="resetFilters()">
+                重置筛选 <iconify-icon icon="mdi:refresh"></iconify-icon>
+            </button>
+        </div>
+    </header>
+    <div class="p-8">
+        <div class="mb-8 flex items-center justify-between">
+            <p class="text-sm text-gray-500 font-medium">当前列表匹配到 <span id="matchCount" class="text-gray-800 font-black">0</span> 只猫咪</p>
+            <div class="flex items-center gap-4">
+                <select id="areaFilter" class="text-sm bg-white border border-gray-200 rounded-lg px-3 py-2" onchange="loadCats()">
+                    <option value="">全部区域</option>
+                    <option value="北校区">北校区</option>
+                    <option value="南校区">南校区</option>
+                    <option value="西校区">西校区</option>
+                    <option value="东校区">东校区</option>
+                </select>
+                <div class="flex bg-white rounded-lg border border-gray-200 p-1">
+                    <button class="p-2 text-indigo-600 bg-indigo-50 rounded" onclick="setViewMode('grid', this)" id="gridViewBtn">
+                        <iconify-icon icon="mdi:view-grid"></iconify-icon>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:bg-gray-50 rounded" onclick="setViewMode('list', this)" id="listViewBtn">
+                        <iconify-icon icon="mdi:view-list"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 卡片网格 -->
+        <div id="catGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"></div>
+        <!-- 列表视图 -->
+        <div id="catList" class="hidden space-y-4"></div>
+        <!-- 分页 -->
+        <div id="pagination" class="mt-16 flex items-center justify-center gap-2"></div>
+    </div>
+    <footer class="mt-auto py-8 px-8 bg-white border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-gray-400">© 2026 校猫守护 (SchoolCat Guardian) · 校园流浪猫智慧管理平台</p>
+        <div class="flex items-center gap-6">
+            <a class="text-xs text-gray-500 hover:text-indigo-600" href="#">使用协议</a>
+            <a class="text-xs text-gray-500 hover:text-indigo-600" href="#">隐私政策</a>
+            <a class="text-xs text-gray-500 hover:text-indigo-600" href="#">反馈建议</a>
+        </div>
+    </footer>
+</main>
+
+<!-- Add Cat Modal -->
+<div id="addCatModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-800">添加猫咪档案</h3>
+            <button class="text-gray-400 hover:text-gray-600" onclick="hideModal('addCatModal')">
+                <iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">昵称 *</label>
+                    <input id="catNickname" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500" placeholder="如：大橘"/>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">性别</label>
+                    <select id="catGender" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                        <option value="">选择</option>
+                        <option value="公猫">公猫</option>
+                        <option value="母猫">母猫</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">毛色</label>
+                    <input id="catColor" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="如：橘色"/>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">年龄</label>
+                    <input id="catAge" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="如：2岁"/>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">所属区域</label>
+                    <select id="catArea" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl">
+                        <option value="">选择</option>
+                        <option value="北校区">北校区</option>
+                        <option value="南校区">南校区</option>
+                        <option value="西校区">西校区</option>
+                        <option value="东校区">东校区</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">健康状态</label>
+                    <select id="catHealth" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl">
+                        <option value="健康">健康</option>
+                        <option value="常规治疗中">常规治疗中</option>
+                        <option value="绝育恢复中">绝育恢复中</option>
+                        <option value="紧急救治">紧急救治</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <input id="catNeutered" type="checkbox" class="rounded border-gray-300 text-indigo-600"/>
+                <label class="text-sm text-gray-700">已绝育</label>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">发现地点</label>
+                <input id="catLocation" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="如：图书馆东南角"/>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                <textarea id="catDescription" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" rows="3" placeholder="猫咪性格、特征等"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">照片</label>
+                <input id="catPhoto" type="file" accept="image/*" class="w-full px-4 py-2 border border-gray-200 rounded-xl"/>
+            </div>
+        </div>
+        <div class="mt-6">
+            <button class="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700" onclick="submitAddCat()">保存档案</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cat Detail Modal -->
+<div id="catDetailModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="relative h-48 bg-gray-100">
+            <img id="detailPhoto" class="w-full h-full object-cover" src="/static/images/cat-placeholder.svg"/>
+            <button class="absolute top-4 right-4 bg-black/20 hover:bg-black/40 p-2 rounded-full text-white backdrop-blur-md" onclick="hideModal('catDetailModal')">
+                <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+            </button>
+        </div>
+        <div class="p-8">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 id="detailName" class="text-2xl font-black text-gray-800"></h3>
+                    <p id="detailLocation" class="text-sm text-gray-500 mt-1"></p>
+                </div>
+                <span id="detailHealth" class="px-3 py-1 text-xs font-bold rounded"></span>
+            </div>
+            <p id="detailDescription" class="text-gray-600 text-sm mb-6"></p>
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="bg-gray-50 p-3 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">性别</p>
+                    <p id="detailGender" class="font-bold text-gray-800 mt-1">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">绝育</p>
+                    <p id="detailNeutered" class="font-bold text-gray-800 mt-1">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">年龄</p>
+                    <p id="detailAge" class="font-bold text-gray-800 mt-1">-</p>
+                </div>
+            </div>
+            <div id="detailTags" class="flex flex-wrap gap-2 mb-6"></div>
+            <div class="border-t border-gray-100 pt-6">
+                <h4 class="font-bold text-gray-800 mb-4">近期动态</h4>
+                <div id="detailActivities" class="space-y-3">
+                    <p class="text-sm text-gray-400">暂无记录</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+let currentFilter = 'all';
+let currentPage = 1;
+let isGridView = true;
+
+async function checkAuth() {
+    try {
+        const result = await API.getCurrentUser();
+        if (result.user) {
+            document.getElementById('userDisplayName').textContent = result.user.display_name || result.user.username;
+            document.getElementById('userRole').textContent = result.user.role === 'admin' ? '管理员' : '志愿者';
+        }
+    } catch (e) {}
+}
+
+async function loadCats() {
+    const params = { page: currentPage, per_page: 20 };
+    const search = document.getElementById('searchInput').value;
+    if (search) params.search = search;
+
+    const area = document.getElementById('areaFilter').value;
+    if (area) params.area = area;
+
+    if (currentFilter === 'adoptable') params.adoption = '1';
+    else if (currentFilter === 'neutered') params.neutered = '1';
+    else if (currentFilter === 'healthy') params.health = '健康';
+
+    try {
+        const result = await API.getCats(params);
+        document.getElementById('archiveTotal').textContent = result.total;
+        document.getElementById('matchCount').textContent = result.total;
+
+        if (isGridView) {
+            renderGrid(result.cats);
+        } else {
+            renderList(result.cats);
+        }
+        renderPagination(result.page, result.pages);
+    } catch (e) { console.error(e); }
+}
+
+function renderGrid(cats) {
+    const grid = document.getElementById('catGrid');
+    grid.classList.remove('hidden');
+    document.getElementById('catList').classList.add('hidden');
+
+    if (cats.length === 0) {
+        grid.innerHTML = '<div class="col-span-full text-center py-16 text-gray-400"><iconify-icon class="text-4xl mb-4" icon="mdi:cat-off"></iconify-icon><p>暂无猫咪数据</p></div>';
+        return;
+    }
+
+    grid.innerHTML = cats.map(cat => {
+        const healthColor = cat.health_status === '健康' ? 'bg-green-50 text-green-600' :
+                           cat.health_status === '常规治疗中' ? 'bg-amber-50 text-amber-600' :
+                           cat.health_status === '紧急救治' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600';
+        const areaColor = cat.area_tag === '北校区' ? 'bg-indigo-600/80' :
+                         cat.area_tag === '南校区' ? 'bg-green-600/80' :
+                         cat.area_tag === '西校区' ? 'bg-amber-500/80' : 'bg-gray-600/80';
+        const photoUrl = cat.photo_url || '/static/images/cat-placeholder.svg';
+
+        return `
+            <div class="cat-card group bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer" onclick="showDetail(${cat.cat_id})">
+                <div class="relative h-64">
+                    <img alt="${cat.nickname}" class="w-full h-full object-cover" src="${photoUrl}" onerror="this.src='/static/images/cat-placeholder.svg'"/>
+                    <div class="absolute top-4 left-4 flex gap-2">
+                        <span class="${areaColor} backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase">${cat.area_tag || '校园'}</span>
+                    </div>
+                    <div class="cat-action absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 translate-y-4 flex items-center justify-center transition-all duration-300">
+                        <span class="bg-white text-indigo-600 px-6 py-2 rounded-full font-bold text-sm shadow-xl">查看完整档案</span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-black text-gray-800">${cat.nickname}</h3>
+                        <span class="${healthColor} text-[10px] font-bold px-2 py-0.5 rounded">${cat.health_status}</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-2 mb-4">${cat.description || '暂无描述'}</p>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        ${cat.is_neutered ? '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">已绝育</span>' : ''}
+                        ${cat.gender ? '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">'+cat.gender+'</span>' : ''}
+                        ${cat.age_info ? '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] rounded border border-gray-100">'+cat.age_info+'</span>' : ''}
+                    </div>
+                    <div class="pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-gray-400">
+                            <iconify-icon icon="mdi:eye"></iconify-icon> ${cat.view_count || 0} 浏览
+                        </div>
+                        <span class="text-gray-400">${cat.created_at ? new Date(cat.created_at).toLocaleDateString() : ''}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderList(cats) {
+    const list = document.getElementById('catList');
+    list.classList.remove('hidden');
+    document.getElementById('catGrid').classList.add('hidden');
+
+    if (cats.length === 0) {
+        list.innerHTML = '<div class="text-center py-16 text-gray-400"><p>暂无猫咪数据</p></div>';
+        return;
+    }
+
+    list.innerHTML = cats.map(cat => `
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-6 hover:shadow-md transition-all cursor-pointer" onclick="showDetail(${cat.cat_id})">
+            <img class="w-20 h-20 rounded-xl object-cover flex-shrink-0" src="${cat.photo_url || '/static/images/cat-placeholder.svg'}" onerror="this.src='/static/images/cat-placeholder.svg'"/>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-3 mb-1">
+                    <h4 class="font-bold text-gray-800">${cat.nickname}</h4>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">${cat.area_tag || '校园'}</span>
+                </div>
+                <p class="text-sm text-gray-500 truncate">${cat.description || '暂无描述'}</p>
+                <div class="flex gap-3 mt-2 text-xs text-gray-400">
+                    ${cat.gender ? '<span>'+cat.gender+'</span>' : ''}
+                    ${cat.age_info ? '<span>'+cat.age_info+'</span>' : ''}
+                    <span>${cat.view_count || 0} 次浏览</span>
+                </div>
+            </div>
+            <div class="text-right flex-shrink-0">
+                <span class="text-xs font-bold px-2 py-1 rounded ${cat.health_status === '健康' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}">${cat.health_status}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderPagination(page, pages) {
+    const container = document.getElementById('pagination');
+    if (pages <= 1) { container.innerHTML = ''; return; }
+
+    let html = `<button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50" onclick="goToPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>
+        <iconify-icon icon="mdi:chevron-left"></iconify-icon>
+    </button>`;
+
+    for (let i = Math.max(1, page - 2); i <= Math.min(pages, page + 2); i++) {
+        html += `<button class="w-10 h-10 rounded-xl ${i === page ? 'bg-indigo-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'} font-bold text-sm" onclick="goToPage(${i})">${i}</button>`;
+    }
+
+    html += `<button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50" onclick="goToPage(${page + 1})" ${page >= pages ? 'disabled' : ''}>
+        <iconify-icon icon="mdi:chevron-right"></iconify-icon>
+    </button>`;
+
+    container.innerHTML = html;
+}
+
+function goToPage(p) {
+    currentPage = p;
+    loadCats();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function setFilter(filter, btn) {
+    currentFilter = filter;
+    currentPage = 1;
+    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadCats();
+}
+
+function resetFilters() {
+    currentFilter = 'all';
+    currentPage = 1;
+    document.getElementById('searchInput').value = '';
+    document.getElementById('areaFilter').value = '';
+    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+    document.querySelector('.filter-chip[data-filter="all"]').classList.add('active');
+    loadCats();
+}
+
+function setViewMode(mode, btn) {
+    isGridView = mode === 'grid';
+    document.getElementById('gridViewBtn').className = 'p-2 ' + (isGridView ? 'text-indigo-600 bg-indigo-50 rounded' : 'text-gray-400 hover:bg-gray-50 rounded');
+    document.getElementById('listViewBtn').className = 'p-2 ' + (!isGridView ? 'text-indigo-600 bg-indigo-50 rounded' : 'text-gray-400 hover:bg-gray-50 rounded');
+    loadCats();
+}
+
+// --- Add Cat ---
+function showAddModal() {
+    document.getElementById('addCatModal').classList.remove('hidden');
+}
+
+function hideModal(id) {
+    document.getElementById(id).classList.add('hidden');
+}
+
+async function submitAddCat() {
+    const formData = new FormData();
+    formData.append('nickname', document.getElementById('catNickname').value || '未命名');
+    formData.append('gender', document.getElementById('catGender').value || '');
+    formData.append('color', document.getElementById('catColor').value || '');
+    formData.append('age_info', document.getElementById('catAge').value || '');
+    formData.append('area_tag', document.getElementById('catArea').value || '');
+    formData.append('health_status', document.getElementById('catHealth').value || '健康');
+    formData.append('is_neutered', document.getElementById('catNeutered').checked ? 'true' : 'false');
+    formData.append('location_description', document.getElementById('catLocation').value || '');
+    formData.append('description', document.getElementById('catDescription').value || '');
+
+    const photoFile = document.getElementById('catPhoto').files[0];
+    if (photoFile) formData.append('photo', photoFile);
+
+    try {
+        await API.createCat(formData);
+        alert('添加成功！');
+        hideModal('addCatModal');
+        loadCats();
+    } catch (e) { alert(e.message); }
+}
+
+// --- Detail ---
+async function showDetail(catId) {
+    try {
+        const cat = await API.getCat(catId);
+        document.getElementById('detailPhoto').src = cat.photo_url || '/static/images/cat-placeholder.svg';
+        document.getElementById('detailName').textContent = cat.nickname;
+        document.getElementById('detailLocation').textContent = (cat.location_description || '') + ' · ' + (cat.area_tag || '校园');
+        document.getElementById('detailDescription').textContent = cat.description || '暂无描述';
+
+        const healthEl = document.getElementById('detailHealth');
+        healthEl.textContent = cat.health_status;
+        healthEl.className = 'px-3 py-1 text-xs font-bold rounded ' + (
+            cat.health_status === '健康' ? 'bg-green-50 text-green-600' :
+            cat.health_status === '常规治疗中' ? 'bg-amber-50 text-amber-600' :
+            cat.health_status === '紧急救治' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+        );
+
+        document.getElementById('detailGender').textContent = cat.gender || '未知';
+        document.getElementById('detailNeutered').textContent = cat.is_neutered ? '已绝育' : '未绝育';
+        document.getElementById('detailAge').textContent = cat.age_info || '未知';
+
+        const tagsContainer = document.getElementById('detailTags');
+        if (cat.personality_tags && cat.personality_tags.length > 0) {
+            tagsContainer.innerHTML = cat.personality_tags.map(t =>
+                `<span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full border border-indigo-100">${t}</span>`
+            ).join('');
+        } else {
+            tagsContainer.innerHTML = '';
+        }
+
+        const activities = document.getElementById('detailActivities');
+        if (cat.check_ins && cat.check_ins.length > 0) {
+            activities.innerHTML = cat.check_ins.slice(0, 10).map(ci => `
+                <div class="flex items-start gap-3 text-sm">
+                    <span class="w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${ci.type === 'feeding' ? 'bg-amber-400' : 'bg-green-400'}"></span>
+                    <div>
+                        <p class="text-gray-700">${ci.username || '匿名'} ${ci.type === 'feeding' ? '投喂了' : '发现了'} ${cat.nickname}</p>
+                        <p class="text-xs text-gray-400">${ci.location_description || ''} · ${new Date(ci.created_at).toLocaleString()}</p>
+                        ${ci.comment ? '<p class="text-xs text-gray-500 mt-1">"'+ci.comment+'"</p>' : ''}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            activities.innerHTML = '<p class="text-sm text-gray-400">暂无活动记录</p>';
+        }
+
+        document.getElementById('catDetailModal').classList.remove('hidden');
+    } catch (e) { console.error(e); }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuth();
+    await loadCats();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GIS 智慧地图 - 校猫守护</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    .sidebar-item:hover {
+        background-color: rgba(99, 102, 241, 0.1);
+        color: #4f46e5;
+    }
+    .sidebar-item.active {
+        background-color: #4f46e5;
+        color: white;
+    }
+    .leaflet-container { width: 100%; height: 100%; }
+    .leaflet-popup-content-wrapper { border-radius: 16px !important; padding: 0 !important; overflow: hidden !important; }
+    .leaflet-popup-content { margin: 0 !important; width: 280px !important; }
+    .leaflet-popup-close-button { top: 8px !important; right: 8px !important; color: white !important; opacity: 0.8 !important; }
+    @keyframes scroll-left {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+    .animate-scroll-left {
+        display: flex;
+        width: fit-content;
+        animation: scroll-left 30s linear infinite;
+    }
+</style>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex overflow-hidden">
+
+<!-- 左侧导航栏 -->
+<aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 flex-shrink-0 z-30 relative">
+    <div class="p-4 flex items-center gap-3 border-b border-gray-100 h-16">
+        <div class="bg-indigo-600 p-2 rounded-xl">
+            <iconify-icon class="text-white text-2xl" icon="mdi:cat"></iconify-icon>
+        </div>
+        <span class="font-bold text-xl text-gray-800 hidden lg:block">校猫守护</span>
+    </div>
+    <nav class="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+        <a class="sidebar-item active flex items-center gap-4 p-3 rounded-xl transition-all" href="/">
+            <iconify-icon class="text-2xl" icon="mdi:map-marker-radius"></iconify-icon>
+            <span class="font-medium hidden lg:block">GIS 地图</span>
+        </a>
+        <a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="/admin">
+            <iconify-icon class="text-2xl" icon="mdi:view-dashboard"></iconify-icon>
+            <span class="font-medium hidden lg:block">管理看板</span>
+        </a>
+        <a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="/archive">
+            <iconify-icon class="text-2xl" icon="mdi:folder-account"></iconify-icon>
+            <span class="font-medium hidden lg:block">猫咪档案</span>
+        </a>
+        <div class="pt-4 pb-2">
+            <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:block">常用工具</p>
+        </div>
+        <a class="sidebar-item text-gray-500 flex items-center gap-4 p-3 rounded-xl transition-all" href="#" onclick="enterReportMode()">
+            <iconify-icon class="text-2xl" icon="mdi:camera-plus"></iconify-icon>
+            <span class="font-medium hidden lg:block">发现上报</span>
+        </a>
+    </nav>
+    <div class="p-4 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+            <div id="avatarContainer" class="w-10 h-10 rounded-full border border-gray-200 bg-indigo-100 flex items-center justify-center">
+                <iconify-icon class="text-indigo-600 text-xl" icon="mdi:account"></iconify-icon>
+            </div>
+            <div class="hidden lg:block">
+                <p id="userDisplayName" class="text-sm font-bold text-gray-800">未登录</p>
+                <p id="userRole" class="text-xs text-gray-500">游客</p>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- 主地图区域 -->
+<main class="flex-1 relative overflow-hidden flex flex-col">
+    <!-- 顶部状态栏 -->
+    <header class="absolute top-4 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
+        <div class="flex gap-4 pointer-events-auto">
+            <div class="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/50 flex items-center gap-3">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                <span class="text-sm font-bold text-gray-700">在册猫咪: <span id="totalCatCount">0</span> 只</span>
+            </div>
+        </div>
+        <div class="flex gap-3 pointer-events-auto">
+            <div class="relative">
+                <input id="searchInput" class="bg-white/90 backdrop-blur-md pl-10 pr-4 py-2 rounded-full shadow-lg border border-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64 text-sm transition-all" placeholder="搜索猫咪姓名..." type="text" onkeyup="if(event.key==='Enter') searchCats()"/>
+                <iconify-icon class="absolute left-3 top-2.5 text-gray-400 text-lg" icon="mdi:magnify"></iconify-icon>
+            </div>
+            <button id="loginBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-indigo-700 transition-all text-sm font-medium" onclick="showLoginModal()">登录</button>
+        </div>
+    </header>
+
+    <!-- 地图容器 -->
+    <div id="map" class="flex-1 w-full relative" style="z-index:0;"></div>
+
+    <!-- 上报模式提示条 -->
+    <div id="reportModeBar" class="hidden absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-indigo-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4">
+        <iconify-icon icon="mdi:camera-plus" class="text-xl"></iconify-icon>
+        <span class="text-sm font-bold">点击地图上的位置上报猫咪发现</span>
+        <button class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full text-xs font-bold" onclick="cancelReportMode()">取消</button>
+    </div>
+
+    <!-- 右侧工具栏 -->
+    <div class="absolute right-6 top-1/2 -translate-y-1/2 space-y-3 z-30">
+        <div class="bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/50 flex flex-col gap-2">
+            <button class="w-10 h-10 rounded-xl hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-all" title="放大" onclick="map&&map.zoomIn()">
+                <iconify-icon class="text-xl" icon="mdi:plus"></iconify-icon>
+            </button>
+            <button class="w-10 h-10 rounded-xl hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-all" title="缩小" onclick="map&&map.zoomOut()">
+                <iconify-icon class="text-xl" icon="mdi:minus"></iconify-icon>
+            </button>
+        </div>
+        <div class="bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/50 flex flex-col gap-2">
+            <button class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center transition-all" title="定位到我" onclick="locateMe()">
+                <iconify-icon class="text-xl" icon="mdi:crosshairs-gps"></iconify-icon>
+            </button>
+        </div>
+        <div class="bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/50 flex flex-col gap-2">
+            <button class="w-10 h-10 rounded-xl hover:bg-amber-50 hover:text-amber-600 flex items-center justify-center text-gray-500 transition-all" title="上报发现" onclick="enterReportMode()">
+                <iconify-icon class="text-xl" icon="mdi:camera-plus"></iconify-icon>
+            </button>
+            <button class="w-10 h-10 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-center text-gray-500 transition-all" title="刷新" onclick="refreshMarkers()">
+                <iconify-icon class="text-xl" icon="mdi:refresh"></iconify-icon>
+            </button>
+        </div>
+    </div>
+
+    <!-- 底部动态栏 -->
+    <div class="h-20 bg-white/80 backdrop-blur-xl border-t border-gray-200 flex items-center px-6 gap-8 overflow-hidden flex-shrink-0 z-20">
+        <div class="flex items-center gap-2 whitespace-nowrap border-r pr-8 border-gray-100">
+            <iconify-icon class="text-indigo-600 text-xl" icon="mdi:broadcast"></iconify-icon>
+            <span class="font-bold text-gray-700">实时动态:</span>
+        </div>
+        <div class="flex-1 overflow-hidden relative h-6">
+            <div class="animate-scroll-left" id="activityFeed">
+                <div class="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="font-medium text-gray-800">加载中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Login Modal -->
+<div id="loginModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-800">登录</h3>
+            <button class="text-gray-400 hover:text-gray-600" onclick="hideModal('loginModal')"><iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon></button>
+        </div>
+        <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">用户名</label><input id="loginUsername" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500" placeholder="请输入用户名"/></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">密码</label><input id="loginPassword" type="password" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500" placeholder="请输入密码"/></div>
+        </div>
+        <div class="mt-4 text-xs text-gray-500">
+            <p>测试账号: admin / admin123（管理员）</p>
+            <p>测试账号: volunteer / vol123（志愿者）</p>
+        </div>
+        <div class="mt-6 flex gap-3">
+            <button class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700" onclick="handleLogin()">登录</button>
+            <button class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200" onclick="handleRegister()">注册</button>
+        </div>
+    </div>
+</div>
+
+<!-- Report Modal -->
+<div id="reportModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-800">上报猫咪发现</h3>
+            <button class="text-gray-400 hover:text-gray-600" onclick="hideModal('reportModal'); cancelReportMode()"><iconify-icon icon="mdi:close" class="text-2xl"></iconify-icon></button>
+        </div>
+        <div class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+            <iconify-icon icon="mdi:map-marker" class="inline"></iconify-icon>
+            上报位置: <span id="reportCoords">请在地图上点击选择位置</span>
+        </div>
+        <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">猫咪昵称</label><input id="reportNickname" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="如：小橘"/></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">性别</label><select id="reportGender" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl"><option value="">不确定</option><option value="公猫">公猫</option><option value="母猫">母猫</option></select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">毛色</label><input id="reportColor" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="如：橘色"/></div>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">发现地点描述</label><input id="reportLocation" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="如：图书馆东南角"/></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">备注</label><textarea id="reportComment" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" rows="3" placeholder="描述猫咪特征、状态等"></textarea></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">照片</label><input id="reportPhoto" type="file" accept="image/*" class="w-full px-4 py-2 border border-gray-200 rounded-xl"/></div>
+        </div>
+        <div class="mt-6"><button class="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700" onclick="submitReport()">提交上报</button></div>
+    </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+let currentUser = null;
+let map = null;
+let catMarkers = [];
+let reportMarker = null;
+let reportCoords = null;
+let reportModeActive = false;
+let allCats = [];
+const TIANDITU_KEY = '{{ tianditu_api_key }}';
+
+// ===================== Map Initialization =====================
+
+function initMap() {
+    map = L.map('map', {
+        center: [31.9165, 118.7825],
+        zoom: 17,
+        zoomControl: false,
+        attributionControl: false,
+    });
+
+    // 天地图 WGS-84 瓦片 (与数据库坐标系一致)
+    if (TIANDITU_KEY) {
+        L.tileLayer('http://t{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=' + TIANDITU_KEY, {
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            maxZoom: 18,
+        }).addTo(map);
+        L.tileLayer('http://t{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=' + TIANDITU_KEY, {
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            maxZoom: 18,
+        }).addTo(map);
+    } else {
+        console.warn('未配置天地图 API Key，使用高德瓦片 (GCJ-02，坐标可能有偏移)');
+        L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            subdomains: '1234',
+            maxZoom: 18,
+        }).addTo(map);
+    }
+
+    // Click handler for report mode
+    map.on('click', function(e) {
+        if (reportModeActive) {
+            setReportPosition(e.latlng);
+        }
+    });
+
+    // Load data
+    loadCatsForMap();
+    loadActivity();
+}
+
+// ===================== Cat Markers =====================
+
+async function loadCatsForMap() {
+    try {
+        const result = await API.getCats({ per_page: 200 });
+        allCats = result.cats;
+        document.getElementById('totalCatCount').textContent = result.total;
+        addMarkers(result.cats);
+    } catch (e) { console.error(e); }
+}
+
+function addMarkers(cats) {
+    clearMarkers();
+
+    cats.forEach(function(cat) {
+        if (!cat.latitude || !cat.longitude) return;
+
+        const latlng = [cat.latitude, cat.longitude];
+        const photoUrl = cat.photo_url || '/static/images/cat-placeholder.svg';
+
+        const healthColors = {
+            '健康': '#10b981',
+            '绝育恢复中': '#6366f1',
+            '常规治疗中': '#f59e0b',
+            '紧急救治': '#ef4444',
+        };
+        const borderColor = healthColors[cat.health_status] || '#f59e0b';
+
+        // Custom marker icon (cat photo in circle)
+        const icon = L.divIcon({
+            className: '',
+            html: `
+                <div class="relative cursor-pointer group">
+                    <div class="bg-white p-0.5 rounded-full shadow-lg border-2" style="border-color:${borderColor}">
+                        <img class="w-9 h-9 rounded-full object-cover" src="${photoUrl}"
+                             onerror="this.src='/static/images/cat-placeholder.svg'" alt="${cat.nickname}"/>
+                    </div>
+                    <div class="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white/90 text-${borderColor === '#10b981' ? 'green' : 'indigo'}-600 text-[10px] font-bold px-2 py-0.5 rounded-full shadow border opacity-0 group-hover:opacity-100 transition-opacity" style="border-color:${borderColor}">
+                        ${cat.nickname}
+                    </div>
+                </div>
+            `,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+        });
+
+        const marker = L.marker(latlng, { icon });
+        marker.catData = cat;
+
+        marker.on('click', function() {
+            showCatPopup(cat);
+        });
+
+        marker.addTo(map);
+        catMarkers.push(marker);
+    });
+}
+
+function clearMarkers() {
+    if (catMarkers.length > 0) {
+        catMarkers.forEach(m => map.removeLayer(m));
+        catMarkers = [];
+    }
+}
+
+function refreshMarkers() {
+    loadCatsForMap();
+}
+
+// ===================== Cat Popup =====================
+
+function showCatPopup(cat) {
+    const photoUrl = cat.photo_url || '/static/images/cat-placeholder.svg';
+    const healthColor = cat.health_status === '健康' ? 'bg-green-100 text-green-600' :
+                        cat.health_status === '常规治疗中' ? 'bg-amber-100 text-amber-600' :
+                        cat.health_status === '紧急救治' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600';
+
+    const content = document.createElement('div');
+    content.innerHTML = `
+        <div class="relative h-32 overflow-hidden bg-gray-100">
+            <img class="w-full h-full object-cover" src="${photoUrl}"
+                 onerror="this.src='/static/images/cat-placeholder.svg'" alt="${cat.nickname}"/>
+        </div>
+        <div class="p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">${cat.nickname}</h3>
+                    <p class="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <iconify-icon icon="mdi:map-marker"></iconify-icon> ${cat.location_description || '位置未知'}
+                    </p>
+                </div>
+                <span class="${healthColor} text-[10px] font-bold px-2 py-1 rounded">${cat.health_status}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-4 text-xs">
+                <div class="bg-gray-50 p-2 rounded"><p class="text-gray-400">性别</p><p class="font-medium">${cat.gender || '未知'}</p></div>
+                <div class="bg-gray-50 p-2 rounded"><p class="text-gray-400">绝育状态</p><p class="font-medium">${cat.is_neutered ? '已绝育' : '未绝育'}</p></div>
+            </div>
+            <a href="/archive?cat_id=${cat.cat_id}" class="block w-full text-center py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">查看详细档案</a>
+        </div>
+    `;
+
+    L.popup({
+        maxWidth: 280,
+        minWidth: 280,
+        className: 'cat-popup',
+        offset: [0, -10],
+    })
+    .setLatLng([cat.latitude, cat.longitude])
+    .setContent(content)
+    .openOn(map);
+}
+
+// ===================== Search =====================
+
+async function searchCats() {
+    const keyword = document.getElementById('searchInput').value.trim();
+    if (!keyword) return refreshMarkers();
+    try {
+        const result = await API.getCats({ search: keyword, per_page: 200 });
+        clearMarkers();
+        addMarkers(result.cats);
+        if (result.cats.length > 0) {
+            map.setView([result.cats[0].latitude, result.cats[0].longitude], 17);
+        }
+    } catch (e) { console.error(e); }
+}
+
+// ===================== Report Mode =====================
+
+function enterReportMode() {
+    if (!currentUser) { alert('请先登录后再上报'); showLoginModal(); return; }
+    reportModeActive = true;
+    document.getElementById('reportModeBar').classList.remove('hidden');
+    map.getContainer().style.cursor = 'crosshair';
+}
+
+function cancelReportMode() {
+    reportModeActive = false;
+    document.getElementById('reportModeBar').classList.add('hidden');
+    if (reportMarker) { map.removeLayer(reportMarker); reportMarker = null; }
+    reportCoords = null;
+    if (map) map.getContainer().style.cursor = '';
+}
+
+function setReportPosition(latlng) {
+    reportCoords = latlng;
+    document.getElementById('reportCoords').textContent =
+        latlng.lat.toFixed(6) + ', ' + latlng.lng.toFixed(6);
+
+    if (reportMarker) map.removeLayer(reportMarker);
+    reportMarker = L.marker(latlng, {
+        icon: L.divIcon({
+            className: '',
+            html: '<div class="w-7 h-7 bg-red-500 border-3 border-white rounded-full shadow-lg animate-ping"></div><div class="w-4 h-4 bg-red-600 border-2 border-white rounded-full shadow-lg absolute top-1.5 left-1.5"></div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+        })
+    }).addTo(map);
+
+    document.getElementById('reportModal').classList.remove('hidden');
+}
+
+async function submitReport() {
+    if (!currentUser) { alert('请先登录'); return; }
+    if (!reportCoords) { alert('请在地图上选择位置'); return; }
+
+    const formData = new FormData();
+    formData.append('nickname', document.getElementById('reportNickname').value || '未命名');
+    formData.append('gender', document.getElementById('reportGender').value || '');
+    formData.append('color', document.getElementById('reportColor').value || '');
+    formData.append('location_description', document.getElementById('reportLocation').value || '');
+    formData.append('comment', document.getElementById('reportComment').value || '');
+    formData.append('latitude', reportCoords.lat);
+    formData.append('longitude', reportCoords.lng);
+
+    const photoFile = document.getElementById('reportPhoto').files[0];
+    if (photoFile) formData.append('photo', photoFile);
+
+    try {
+        await API.createCat(formData);
+        alert('上报成功！待管理员审核。');
+        hideModal('reportModal');
+        cancelReportMode();
+        ['reportNickname','reportGender','reportColor','reportLocation','reportComment'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('reportPhoto').value = '';
+        refreshMarkers();
+    } catch (e) {
+        alert(e.message || '上报失败');
+    }
+}
+
+// ===================== Geolocation =====================
+
+function locateMe() {
+    if (!map) return;
+    map.locate({ setView: true, maxZoom: 17 });
+
+    map.once('locationfound', function(e) {
+        L.marker(e.latlng, {
+            icon: L.divIcon({
+                className: '',
+                html: '<div class="w-6 h-6 bg-blue-500 border-3 border-white rounded-full shadow-lg"></div>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+            })
+        }).addTo(map);
+    });
+
+    map.once('locationerror', function() {
+        alert('无法获取位置，请在浏览器中允许定位权限');
+    });
+}
+
+// ===================== Auth =====================
+
+async function checkAuth() {
+    try {
+        const result = await API.getCurrentUser();
+        currentUser = result.user;
+        if (currentUser) {
+            document.getElementById('userDisplayName').textContent = currentUser.display_name || currentUser.username;
+            document.getElementById('userRole').textContent = currentUser.role === 'admin' ? '管理员' : '志愿者';
+            document.getElementById('loginBtn').textContent = '退出';
+            document.getElementById('loginBtn').onclick = handleLogout;
+        }
+    } catch (e) {}
+}
+
+async function handleLogin() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    if (!username || !password) { alert('请输入用户名和密码'); return; }
+    try {
+        const result = await API.login(username, password);
+        currentUser = result.user;
+        document.getElementById('userDisplayName').textContent = currentUser.display_name || currentUser.username;
+        document.getElementById('userRole').textContent = currentUser.role === 'admin' ? '管理员' : '志愿者';
+        document.getElementById('loginBtn').textContent = '退出';
+        document.getElementById('loginBtn').onclick = handleLogout;
+        hideModal('loginModal');
+        alert('登录成功！');
+    } catch (e) { alert(e.message || '登录失败'); }
+}
+
+async function handleRegister() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    if (!username || !password) { alert('请输入用户名和密码'); return; }
+    try {
+        await API.request('POST', '/api/auth/register', { username, password, display_name: username, role: 'volunteer' });
+        await handleLogin();
+    } catch (e) { alert(e.message || '注册失败'); }
+}
+
+async function handleLogout() {
+    await API.logout();
+    currentUser = null;
+    document.getElementById('userDisplayName').textContent = '未登录';
+    document.getElementById('userRole').textContent = '游客';
+    document.getElementById('loginBtn').textContent = '登录';
+    document.getElementById('loginBtn').onclick = showLoginModal;
+}
+
+function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ===================== Activity Feed =====================
+
+async function loadActivity() {
+    try {
+        const stats = await API.getStats();
+        const feed = document.getElementById('activityFeed');
+        if (stats.recent_activities && stats.recent_activities.length > 0) {
+            const items = stats.recent_activities.slice(0, 5).map(a => {
+                const type = a.type === 'feeding' ? '投喂了' : '发现了';
+                return `<div class="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap mx-4">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="font-medium text-gray-800">${a.username || '匿名'}:</span>
+                    ${a.location_description || '某处'} ${type}「${a.cat_nickname || '未知'}」
+                </div>`;
+            }).join('');
+            feed.innerHTML = items + items;
+        }
+    } catch (e) {}
+}
+
+// ===================== Init =====================
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuth();
+    initMap();
+});
+</script>
+</body>
+</html>
